@@ -9,12 +9,12 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.awt.geom.AffineTransform;
-import java.awt.image.AffineTransformOp;
 import java.awt.Graphics2D;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 public class Game extends JFrame implements KeyListener{
+    private static final long serialVersionUID = -8908839269479863460L;
     private final boolean debug=true;
     private final double globalImgScale=3.0;
     private Graphics g;
@@ -25,28 +25,37 @@ public class Game extends JFrame implements KeyListener{
     private double friction=.96;//higher=slipperier
 
     private Player me;
-    private Client client;
+    //private Client client;
 
     private boolean forwardPressed=false;
     private boolean leftPressed=false;
     private boolean rightPressed=false;
     private boolean downPressed=false;
+    private boolean turboPressed=false;
+    private boolean handBrakePressed=false;
 
     private final int BOARD_WIDTH=1920;
     private final int BOARD_HEIGHT=1080;
     private final int TRACK_LENGTH=50;
+    private final int TURN_SPEED=2;
     private int[][] tireTracks;
     private int trackIndexer=0;
 
-    private BufferedImage truck;
-    private BufferedImage flippedTruck;
+    private BufferedImage truck0;//facing up
+    private BufferedImage truck1;//between up and sideways
+    private BufferedImage truck2;//sideways
+    private BufferedImage truck3;//between sideways and down
+    private BufferedImage truck4;//down
     public static void main(String[] args){
         new Game();
     }
     public Game(){
         try{
-            truck=scale(ImageIO.read(new File("art\\truck.png")),globalImgScale);
-            flippedTruck=flip(truck);
+            truck0=scale(ImageIO.read(new File("art\\truck0.png")),globalImgScale);
+            truck1=scale(ImageIO.read(new File("art\\truck1.png")),globalImgScale);
+            truck2=scale(ImageIO.read(new File("art\\truck2.png")),globalImgScale);
+            truck3=scale(ImageIO.read(new File("art\\truck3.png")),globalImgScale);
+            truck4=scale(ImageIO.read(new File("art\\truck4.png")),globalImgScale);
         }catch(Exception e){
             if(debug)e.printStackTrace();
         }
@@ -68,7 +77,7 @@ public class Game extends JFrame implements KeyListener{
         repaint();
 
         me=new Player(dispWidth/2,dispHeight/2,0,0,5,128);
-        client=new Client(Client.getIpAddress());
+        //client=new Client(Client.getIpAddress());
         //me.setId(client.joinGame());
 
         tireTracks=new int[2][TRACK_LENGTH];
@@ -120,14 +129,24 @@ public class Game extends JFrame implements KeyListener{
         int score=me.getScore();
         int heading=me.getHeading();
         int size=(int)(globalImgScale*(score+Player.MINSIZE));
-        //g.setColor(Color.RED);
-        if((heading+64)%255>128)
-        g.drawImage(rotateImageByDegrees(truck,((-360.0/255)*heading+180)%360),x-size/2,y-size/2,null);
-        else g.drawImage(rotateImageByDegrees(flippedTruck,((-360.0/255)*heading+360)%360),x-size/2,y-size/2,null);
-        //g.fillOval(x-size/2,y-size/2,size,size);
-        //g.setColor(Color.BLACK);
-        //g.drawLine(x,y,(int)(x-50*approxCos(heading)),(int)(y+50*approxSin(heading)));
-
+        if((heading+256)%256>240)
+            g.drawImage(flip(truck2),x-size/2,y-size/2,null);
+        else if((heading+256)%256>208)
+            g.drawImage(flip(truck1),x-size/2,y-size/2,null);
+        else if((heading+256)%256>176)
+            g.drawImage(truck0,x-size/2,y-size/2,null);
+        else if((heading+256)%256>144)
+            g.drawImage(truck1,x-size/2,y-size/2,null);
+        else if((heading+256)%256>112)
+            g.drawImage(truck2,x-size/2,y-size/2,null);
+        else if((heading+256)%256>80)
+            g.drawImage(truck3,x-size/2,y-size/2,null);
+        else if((heading+256)%256>48)
+            g.drawImage(truck4,x-size/2,y-size/2,null);
+        else if((heading+256)%256>16) 
+           g.drawImage(flip(truck3),x-size/2,y-size/2,null);
+        else
+            g.drawImage(flip(truck2),x-size/2,y-size/2,null);
     }
     public void drawTracks(Graphics g){
         g.setColor(Color.DARK_GRAY);
@@ -141,10 +160,13 @@ public class Game extends JFrame implements KeyListener{
         trackIndexer=(trackIndexer+1)%TRACK_LENGTH;
     }
     public void processInputs(){
-        if(forwardPressed)vel+=.1;
-        if(leftPressed)me.shiftHeading(2);
-        if(rightPressed)vel-=.1;
-        if(downPressed)me.shiftHeading(-2);
+        int mult=1;
+        if(turboPressed)mult=2;
+        if(handBrakePressed)mult=0;
+        if(forwardPressed)vel+=(.1*mult);
+        if(leftPressed)me.shiftHeading((int)(TURN_SPEED*(2.0/(mult+1))));
+        if(rightPressed)vel-=(.1*mult);
+        if(downPressed)me.shiftHeading((int)(-TURN_SPEED*(2.0/(mult+1))));
     }
 
     public double approxCos(int deg){//only works from 0-255
@@ -214,6 +236,10 @@ public class Game extends JFrame implements KeyListener{
             rightPressed=true;
         }if(keyCode==KeyEvent.VK_D){
             downPressed=true;
+        }if(keyCode==KeyEvent.VK_SPACE){
+            handBrakePressed=true;
+        }if(keyCode==KeyEvent.VK_SHIFT){
+            turboPressed=true;
         }
     }
     @Override
@@ -229,6 +255,10 @@ public class Game extends JFrame implements KeyListener{
             rightPressed=false;
         }if(keyCode==KeyEvent.VK_D){
             downPressed=false;
+        }if(keyCode==KeyEvent.VK_SPACE){
+            handBrakePressed=false;
+        }if(keyCode==KeyEvent.VK_SHIFT){
+            turboPressed=false;
         }
     }
 }
