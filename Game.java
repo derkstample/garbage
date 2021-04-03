@@ -78,7 +78,7 @@ public class Game extends JFrame implements KeyListener{
         repaint();//safety repaint
 
         me=new Player(dispWidth/2,dispHeight/2,0,0,5,128);
-        client=new Client(Client.getIpAddress());//TODO: set the ip address of client properly
+        client=new Client(Client.getIpAddress());//TODO: set the ip address of client properly (use a new frame??)
         int temp=client.joinGame();//TODO: check if server connection is lost on every request somehow?
         if(temp==-1){
             System.out.println("error: no server running");

@@ -38,5 +38,6 @@ public class Camera{
 
     public void drawView(Graphics g,ArrayList<Player> players,ArrayList<Garbage> garbage){
         //TODO: draw players and garbage onto g if the camera can see it
+        //TODO: import spritesheets and figure out which sprite to draw based on heading+score
     }
 }
