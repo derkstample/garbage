@@ -17,10 +17,11 @@ public class Server{
         players=new ArrayList<Player>();
         garbage=new ArrayList<Garbage>();
         System.out.println(getIpAddress());
+        Thread dataThread=new DataProcessor();
         try{
             ss=new ServerSocket(8080);
+            dataThread.start();
             while(true){
-                if(debug)System.out.println("waiting for connection:");
                 s=ss.accept();
                 Thread clientThread=new HandleRequest(s);
                 clientThread.start();
@@ -40,24 +41,33 @@ public class Server{
         }
         return out;
     }
+    private class DataProcessor extends Thread{
+        public DataProcessor(){
+        }
+        public synchronized void run(){
+            while(true){
+                //TODO: check for collisions
+                //TODO: ScoreManager??
+            }
+        }
+    }
 
     private class HandleRequest extends Thread{
         Socket s;
         public HandleRequest(Socket s){
             this.s=s;
         }
-        public void run(){
+        public synchronized void run(){
             try{
                 String connection=s.getInetAddress().toString().substring(1);
-                if(debug)System.out.println("connected to:"+connection);
                 BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
                 int received = in.read();
                 int op=(received&0b11110000)>>4;
                 int arg=received&0b00001111;
-                if(debug)System.out.println("received:"+op+":"+arg);
+                if(debug)System.out.println(connection+":"+Client.readFriendly(received));//using Client.readFriendly() because it was already there and i didnt want to ctrlc ctrlv
                 switch(op){
-                    case 0b0000:break;
+                    case 0b0000:break;//noop
                     case 0b0001:out.write(getNumPlayers());break;//get number of players
                     case 0b0010:out.write(getPlayerX(arg));break;//get xpos of player xxxx
                     case 0b0011:out.write(getPlayerY(arg));break;//get ypos of player xxxx
@@ -71,12 +81,10 @@ public class Server{
                     case 0b1011:out.write(setXPos(arg,received>>8));break;//set xpos of player xxxx
                     case 0b1100:out.write(setYPos(arg,received>>8));break;//set ypos of player xxxx
                     case 0b1101:out.write(joinGame());break;//join game
-                    case 0b1110:break;//
+                    case 0b1110:out.write(getHeading(arg));break;//get heading of player xxxx
                     case 0b1111:break;//
                 }
-
                 out.close();
-                if(debug)System.out.println("closing connection");
             }catch(Exception e){
                 if(debug)e.printStackTrace();
             }
@@ -121,11 +129,12 @@ public class Server{
             return 1;
         }
         private int joinGame(){
-            System.out.println(players.size());
             players.add(new Player());
             players.get(players.size()-1).setId(players.size()-1);
-            System.out.println(players.size()-1);
             return players.size()-1;
+        }
+        private int getHeading(int index){
+            return players.get(index).getHeading();
         }
     }
 }
@@ -145,6 +154,6 @@ public class Server{
     xxxxxxxx:xxxxxxxx:1011:xxxx set xpos of player xxxx returns 1
     xxxxxxxx:xxxxxxxx:1100:xxxx set ypos of player xxxx returns 1
     1101:xxxx join game                                 returns xxxxxxxx
-    1110:xxxx unused
+    1110:xxxx get heading of player xxxx                returns xxxxxxxx
     1111:xxxx unused
 */

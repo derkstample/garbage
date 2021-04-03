@@ -5,12 +5,30 @@ import java.io.OutputStreamWriter;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 public class Client{
     private final static boolean debug=true;
     private String ipaddress;
 
     public Client(String address){
         ipaddress=address;
+    }
+
+    public ArrayList<Player> getPlayers(){
+        ArrayList<Player> out=new ArrayList<Player>();
+        int numPlayers=getNumPlayers();
+        for(int i=0;i<numPlayers;i++){
+            out.add(new Player(getPlayerX(i),getPlayerY(i),getScore(i),i,-1,getHeading(i)));
+        }
+        return out;
+    }
+    public ArrayList<Garbage> getGarbage(){
+        ArrayList<Garbage> out=new ArrayList<Garbage>();
+        int numGarbage=getNumGarbage();
+        for(int i=0;i<numGarbage;i++){
+            out.add(new Garbage(getGarbageX(i),getGarbageY(i),getValue(i),-1,-1));
+        }
+        return out;
     }
     public static String getIpAddress(){//based on code found at https://stackoverflow.com/questions/9481865/getting-the-ip-address-of-the-current-machine-using-java
         String out="err:";
@@ -60,11 +78,16 @@ public class Client{
         return sendReceive(y<<8+0b1100+(id&0b1111));
     }
     public int joinGame(){
-        return sendReceive(0b11010000);
+        int temp=sendReceive(0b11010000);
+        if(temp==255)return -1;
+        return temp;
+    }
+    public int getHeading(int id){
+        return sendReceive(0b11100000+(id&0b1111));
     }
 
     private int sendReceive(int send){//actual communication w/ server
-        if(debug)System.out.println("   Client:"+send);
+        if(debug)System.out.println("   Client:"+readFriendly(send));
         int receive=0b11111111;
         try{
             Socket s=new Socket(ipaddress,8080);
@@ -77,8 +100,29 @@ public class Client{
         }catch(Exception e){
             e.printStackTrace();
         }
-        if(debug)System.out.println("Server:"+receive);
+        if(debug)System.out.println("Server:"+Integer.toBinaryString(receive));
         return receive;
+    }
+    public static String readFriendly(int protocol){
+        switch((protocol&0b11110000)>>4){
+            case 0b0000:return "noop";
+            case 0b0001:return "get numPlayers";
+            case 0b0010:return "get xPos of player "+(protocol&0b1111);
+            case 0b0011:return "get yPos of player "+(protocol&0b1111);
+            case 0b0100:return "get xPos of garbage "+(protocol&0b1111);
+            case 0b0101:return "get yPos of garbage "+(protocol&0b1111);
+            case 0b0110:return "get score of player "+(protocol&0b1111);
+            case 0b0111:return "get value of garbage "+(protocol&0b1111);
+            case 0b1000:return "get id of player "+(protocol&0b1111);
+            case 0b1001:return "get numGarbage";
+            case 0b1010:return "quit game of player "+(protocol&0b1111);
+            case 0b1011:return "set xPos of player "+(protocol&0b1111)+" to "+(protocol>>8);
+            case 0b1100:return "set yPos of player "+(protocol&0b1111)+" to "+(protocol>>8);
+            case 0b1101:return "join game";
+            case 0b1110:return "get heading of player "+(protocol&0b1111);
+            case 0b1111:return "noop";
+        }
+        return "error: unknown protocol";
     }
     @Override
     public String toString() {

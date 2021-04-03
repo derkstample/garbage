@@ -25,7 +25,8 @@ public class Game extends JFrame implements KeyListener{
     private double friction=.96;//higher=slipperier
 
     private Player me;
-    //private Client client;
+    private Client client;
+    private Camera camera;
 
     private boolean forwardPressed=false;
     private boolean leftPressed=false;
@@ -66,21 +67,29 @@ public class Game extends JFrame implements KeyListener{
         dispWidth=disp.getWidth();
 
         setTitle("this game is garbage");
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setUndecorated(true);
+        //setExtendedState(JFrame.MAXIMIZED_BOTH);
+        //setUndecorated(true);
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
         createBufferStrategy(2);
         BufferStrategy strategy=getBufferStrategy();
         addKeyListener(this);
-        repaint();
+        repaint();//safety repaint
 
         me=new Player(dispWidth/2,dispHeight/2,0,0,5,128);
-        //client=new Client(Client.getIpAddress());
-        //me.setId(client.joinGame());
+        client=new Client(Client.getIpAddress());//TODO: set the ip address of client properly
+        int temp=client.joinGame();//TODO: check if server connection is lost on every request somehow?
+        if(temp==-1){
+            System.out.println("error: no server running");
+            System.exit(0);//TODO: maybe don't crash the whole damn thing and just show a popup or something
+        }else{
+            me.setId(temp);
+        }
 
-        tireTracks=new int[2][TRACK_LENGTH];
+        camera=new Camera();//TODO: initialize this properly
+
+        tireTracks=new int[2][TRACK_LENGTH];//TODO: figure out how this is going to work with Camera
         for(int i=0;i<TRACK_LENGTH;i++){
             tireTracks[0][i]=me.getX();
             tireTracks[1][i]=me.getY();
@@ -90,9 +99,11 @@ public class Game extends JFrame implements KeyListener{
             do{
                 try{
                     g=strategy.getDrawGraphics();
-                    drawBG(g);
-                    drawTracks(g);
-                    drawMe(g);
+                    //drawBG(g);
+                    //drawTracks(g);
+                    //drawMe(g);
+                    //TODO: clearScreen();
+                    camera.drawView(g,client.getPlayers(),client.getGarbage());
                     
                     moveMe();
                     updateTracks();
@@ -109,13 +120,13 @@ public class Game extends JFrame implements KeyListener{
     public void moveMe(){
         int newX=me.getX()-(int)(approxCos(me.getHeading())*vel*me.getSpeed());
         int newY=me.getY()+(int)(approxSin(me.getHeading())*vel*me.getSpeed());
-        if(newX>0&&newX<BOARD_WIDTH){
-            me.setX(newX);
-            //client.setPlayerX(newX, me.getId());
+        if(newX>0&&newX<BOARD_WIDTH){//TODO: set this to check based on the camera's bounds
+            if(client.setPlayerX(newX,me.getId())==1)
+                me.setX(newX);
         }
-        if(newY>0&&newY<BOARD_HEIGHT){
-            me.setY(newY);
-            //client.setPlayerY(newY, me.getId());
+        if(newY>0&&newY<BOARD_HEIGHT){//this too
+            if(client.setPlayerY(newY,me.getId())==1)
+                me.setY(newY);
         } 
         if(Math.abs(vel)>0)vel*=friction;
     }
@@ -225,40 +236,26 @@ public class Game extends JFrame implements KeyListener{
     }
     @Override
     public void keyPressed(KeyEvent e) {
-        int keyCode=e.getKeyCode();
-        if(keyCode==KeyEvent.VK_ESCAPE){//would've used switches but needed to account for directional movement
-            System.exit(0);
-        }if(keyCode==KeyEvent.VK_W){
-            forwardPressed=true;
-        }if(keyCode==KeyEvent.VK_A){
-            leftPressed=true;
-        }if(keyCode==KeyEvent.VK_S){
-            rightPressed=true;
-        }if(keyCode==KeyEvent.VK_D){
-            downPressed=true;
-        }if(keyCode==KeyEvent.VK_SPACE){
-            handBrakePressed=true;
-        }if(keyCode==KeyEvent.VK_SHIFT){
-            turboPressed=true;
+        switch(e.getKeyCode()){//nvm you can totally use switches here
+            case KeyEvent.VK_ESCAPE:System.exit(0);
+            case KeyEvent.VK_W:forwardPressed=true;break;
+            case KeyEvent.VK_A:leftPressed=true;break;
+            case KeyEvent.VK_S:rightPressed=true;break;
+            case KeyEvent.VK_D:downPressed=true;break;
+            case KeyEvent.VK_SPACE:handBrakePressed=true;break;
+            case KeyEvent.VK_SHIFT:turboPressed=true;break;
         }
     }
     @Override
     public void keyReleased(KeyEvent e) {
-        int keyCode=e.getKeyCode();
-        if(keyCode==KeyEvent.VK_ESCAPE){//would've used switches but needed to account for directional movement
-            System.exit(0);
-        }if(keyCode==KeyEvent.VK_W){
-            forwardPressed=false;
-        }if(keyCode==KeyEvent.VK_A){
-            leftPressed=false;
-        }if(keyCode==KeyEvent.VK_S){
-            rightPressed=false;
-        }if(keyCode==KeyEvent.VK_D){
-            downPressed=false;
-        }if(keyCode==KeyEvent.VK_SPACE){
-            handBrakePressed=false;
-        }if(keyCode==KeyEvent.VK_SHIFT){
-            turboPressed=false;
+        switch(e.getKeyCode()){
+            case KeyEvent.VK_ESCAPE:System.exit(0);
+            case KeyEvent.VK_W:forwardPressed=false;break;
+            case KeyEvent.VK_A:leftPressed=false;break;
+            case KeyEvent.VK_S:rightPressed=false;break;
+            case KeyEvent.VK_D:downPressed=false;break;
+            case KeyEvent.VK_SPACE:handBrakePressed=false;break;
+            case KeyEvent.VK_SHIFT:turboPressed=false;break;
         }
     }
 }

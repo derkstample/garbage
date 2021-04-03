@@ -1,3 +1,5 @@
+import java.awt.Graphics;
+import java.util.ArrayList;
 public class Camera{
     private int width,height,x,y;
     public Camera(){
@@ -32,5 +34,9 @@ public class Camera{
     }
     public void setY(int y) {
         this.y = y;
+    }
+
+    public void drawView(Graphics g,ArrayList<Player> players,ArrayList<Garbage> garbage){
+        //TODO: draw players and garbage onto g if the camera can see it
     }
 }
