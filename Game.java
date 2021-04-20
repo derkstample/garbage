@@ -15,7 +15,7 @@ import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 public class Game extends JFrame implements KeyListener{
     private static final long serialVersionUID = -8908839269479863460L;
-    private final boolean debug=true;
+    private final boolean debug=false;
     private final double globalImgScale=3.0;
     private Graphics g;
 
@@ -35,28 +35,24 @@ public class Game extends JFrame implements KeyListener{
     private boolean turboPressed=false;
     private boolean handBrakePressed=false;
 
-    private final int BOARD_WIDTH=1920;
-    private final int BOARD_HEIGHT=1080;
+    private final int BOARD_WIDTH;
+    private final int BOARD_HEIGHT
+    ;
     private final int TRACK_LENGTH=50;
     private final int TURN_SPEED=2;
     private int[][] tireTracks;
     private int trackIndexer=0;
 
-    private BufferedImage truck0;//facing up
-    private BufferedImage truck1;//between up and sideways
-    private BufferedImage truck2;//sideways
-    private BufferedImage truck3;//between sideways and down
-    private BufferedImage truck4;//down
+    private BufferedImage trucksheet;
+    private BufferedImage trashsheet;
     public static void main(String[] args){
-        new Game();
+        //new Game(args[0],args[1]);
+        new Game("","derekr");
     }
-    public Game(){
+    public Game(String IP,String name){
         try{
-            truck0=scale(ImageIO.read(new File("art\\truck0.png")),globalImgScale);
-            truck1=scale(ImageIO.read(new File("art\\truck1.png")),globalImgScale);
-            truck2=scale(ImageIO.read(new File("art\\truck2.png")),globalImgScale);
-            truck3=scale(ImageIO.read(new File("art\\truck3.png")),globalImgScale);
-            truck4=scale(ImageIO.read(new File("art\\truck4.png")),globalImgScale);
+            trucksheet=scale(ImageIO.read(new File("art\\trucksheet.png")),globalImgScale);
+            trashsheet=scale(ImageIO.read(new File("art\\garbage.png")),globalImgScale);
         }catch(Exception e){
             if(debug)e.printStackTrace();
         }
@@ -67,8 +63,8 @@ public class Game extends JFrame implements KeyListener{
         dispWidth=disp.getWidth();
 
         setTitle("this game is garbage");
-        //setExtendedState(JFrame.MAXIMIZED_BOTH);
-        //setUndecorated(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setUndecorated(true);
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
@@ -77,8 +73,9 @@ public class Game extends JFrame implements KeyListener{
         addKeyListener(this);
         repaint();//safety repaint
 
-        me=new Player(dispWidth/2,dispHeight/2,0,0,5,128);
-        client=new Client(Client.getIpAddress());//TODO: set the ip address of client properly (use a new frame??)
+        me=new Player(0,0,0,-1,5,128,name);
+        //client=new Client(IP);
+        client=new Client(Client.getIpAddress());
         int temp=client.joinGame();//TODO: check if server connection is lost on every request somehow?
         if(temp==-1){
             System.out.println("error: no server running");
@@ -86,8 +83,15 @@ public class Game extends JFrame implements KeyListener{
         }else{
             me.setId(temp);
         }
+        BOARD_WIDTH=client.getWidth();
+        BOARD_HEIGHT=client.getHeight();
+        client.setPlayerX(BOARD_WIDTH/2,me.getId());
+        me.setX(BOARD_WIDTH/2);
+        client.setPlayerY(BOARD_HEIGHT/2,me.getId());
+        me.setY(BOARD_HEIGHT/2);
+        client.setName(me.getName(),me.getId());
 
-        camera=new Camera();//TODO: initialize this properly
+        camera=new Camera(BOARD_WIDTH,BOARD_HEIGHT,BOARD_WIDTH/2-BOARD_WIDTH/4,BOARD_HEIGHT/2-BOARD_HEIGHT/4,trucksheet,trashsheet);
 
         tireTracks=new int[2][TRACK_LENGTH];//TODO: figure out how this is going to work with Camera
         for(int i=0;i<TRACK_LENGTH;i++){
@@ -99,13 +103,12 @@ public class Game extends JFrame implements KeyListener{
             do{
                 try{
                     g=strategy.getDrawGraphics();
-                    //drawBG(g);
+                    drawBG(g);
                     //drawTracks(g);
-                    //drawMe(g);
-                    //TODO: clearScreen();
                     camera.drawView(g,client.getPlayers(),client.getGarbage());
                     
                     moveMe();
+                    moveCamera();
                     updateTracks();
                     processInputs();
                 }finally{
@@ -120,44 +123,29 @@ public class Game extends JFrame implements KeyListener{
     public void moveMe(){
         int newX=me.getX()-(int)(approxCos(me.getHeading())*vel*me.getSpeed());
         int newY=me.getY()+(int)(approxSin(me.getHeading())*vel*me.getSpeed());
-        if(newX>0&&newX<BOARD_WIDTH){//TODO: set this to check based on the camera's bounds
+        if(newX>0&&newX<BOARD_WIDTH){
             if(client.setPlayerX(newX,me.getId())==1)
                 me.setX(newX);
         }
-        if(newY>0&&newY<BOARD_HEIGHT){//this too
+        if(newY>0&&newY<BOARD_HEIGHT){
             if(client.setPlayerY(newY,me.getId())==1)
                 me.setY(newY);
         } 
         if(Math.abs(vel)>0)vel*=friction;
     }
+    public void moveCamera(){
+        int newX=me.getX()-camera.getWidth()/2;
+        int newY=me.getY()-camera.getHeight()/2;
+        if(newX>0&&newX<BOARD_WIDTH-camera.getWidth()){
+            camera.setX(newX);
+        }
+        if(newY>0&&newY<BOARD_WIDTH-camera.getHeight()){
+            camera.setY(newY);
+        }
+    }
     public void drawBG(Graphics g){
         g.setColor(Color.WHITE);
         g.fillRect(0,0,dispWidth,dispHeight);
-    }
-    public void drawMe(Graphics g){
-        int x=me.getX();
-        int y=me.getY();
-        int score=me.getScore();
-        int heading=me.getHeading();
-        int size=(int)(globalImgScale*(score+Player.MINSIZE));
-        if((heading+256)%256>240)
-            g.drawImage(flip(truck2),x-size/2,y-size/2,null);
-        else if((heading+256)%256>208)
-            g.drawImage(flip(truck1),x-size/2,y-size/2,null);
-        else if((heading+256)%256>176)
-            g.drawImage(truck0,x-size/2,y-size/2,null);
-        else if((heading+256)%256>144)
-            g.drawImage(truck1,x-size/2,y-size/2,null);
-        else if((heading+256)%256>112)
-            g.drawImage(truck2,x-size/2,y-size/2,null);
-        else if((heading+256)%256>80)
-            g.drawImage(truck3,x-size/2,y-size/2,null);
-        else if((heading+256)%256>48)
-            g.drawImage(truck4,x-size/2,y-size/2,null);
-        else if((heading+256)%256>16) 
-           g.drawImage(flip(truck3),x-size/2,y-size/2,null);
-        else
-            g.drawImage(flip(truck2),x-size/2,y-size/2,null);
     }
     public void drawTracks(Graphics g){
         g.setColor(Color.DARK_GRAY);
