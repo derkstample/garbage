@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 
 public class Server{
     private final static boolean debug=true;
@@ -66,143 +67,110 @@ public class Server{
                 String connection=s.getInetAddress().toString().substring(1);
                 BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-                int received=0;
-                String specialRequest="";
-                  
-                try{//TODO: rewrite the entire network protocol to use strings instead of ints
-                    specialRequest=in.readLine();
-                    if(specialRequest.startsWith("X")){
-                        out.write(players.get(Integer.parseInt(specialRequest.substring(1))).getX());
-                    }else if(specialRequest.startsWith("Y")){
-                        out.write(players.get(Integer.parseInt(specialRequest.substring(1))).getY());
-                    }else if(specialRequest.startsWith("setX")){
-                        players.get(Integer.parseInt(specialRequest.substring(4,specialRequest.indexOf(",")))).setX(Integer.parseInt(specialRequest.substring(specialRequest.indexOf(","))));
-                        out.write(1);
-                    }else if(specialRequest.startsWith("setY")){
-                        players.get(Integer.parseInt(specialRequest.substring(4,specialRequest.indexOf(",")))).setY(Integer.parseInt(specialRequest.substring(specialRequest.indexOf(","))));
-                        out.write(1);
-                    }else if(specialRequest.startsWith("gX")){
-                        out.write(garbage.get(Integer.parseInt(specialRequest.substring(1))).getX());
-                    }else if(specialRequest.startsWith("gY")){
-                        out.write(garbage.get(Integer.parseInt(specialRequest.substring(1))).getY());
-                    }
-                    out.close();
-                    return;
-                }catch(Exception e){
-                    received = in.read();
-                }
-                
-                int op=(received&0b11110000)>>4;
-                int arg=received&0b00001111;
-                if(debug)System.out.println(connection+":"+Client.readFriendly(received));//using Client.readFriendly() because it was already there and i didnt want to ctrlc ctrlv
-                switch(op){
-                    case 0b0000:out.write(getName(arg));break;//get name of player xxxx
-                    case 0b0001:out.write(getNum(arg));break;//get number of players
-                    case 0b0010:out.write(getPlayerX(arg));break;//get xpos of player xxxx
-                    case 0b0011:out.write(getPlayerY(arg));break;//get ypos of player xxxx
-                    case 0b0100:out.write(getGarbageX(arg));break;//get xpos of garbage xxxx
-                    case 0b0101:out.write(getGarbageY(arg));break;//get ypos of garbage xxxx
-                    case 0b0110:out.write(getScore(arg));break;//get score of player xxxx
-                    case 0b0111:out.write(getValue(arg));break;//get value of garbage xxxx
-                    case 0b1000:out.write(getId(arg));break;//get id of player xxxx
-                    case 0b1001:out.write(setName(arg,received>>8));break;//get number of garbage
-                    case 0b1010:out.write(leaveGame(arg));break;//makes player xxxx leave the game
-                    case 0b1011:out.write(setXPos(arg,received>>8));break;//set xpos of player xxxx
-                    case 0b1100:out.write(setYPos(arg,received>>8));break;//set ypos of player xxxx
-                    case 0b1101:out.write(joinGame());break;//join game
-                    case 0b1110:out.write(getHeading(arg));break;//get heading of player xxxx
-                    case 0b1111:out.write(getDimension(arg));break;//get dimensions of the game board 0=w 1=h
+                String received=in.readLine();
+                StringTokenizer arg=new StringTokenizer(received,":");
+                if(debug)System.out.println(connection+":"+received);//using Client.readFriendly() because it was already there and i didnt want to ctrlc ctrlv
+                switch(arg.nextToken()){
+                    case "name":out.write(getName(arg.nextToken()));break;//get name of player xxxx
+                    case "num":out.write(getNum(arg.nextToken()));break;//get number of players
+                    case "xpos":out.write(getPlayerX(arg.nextToken()));break;//get xpos of player xxxx
+                    case "ypos":out.write(getPlayerY(arg.nextToken()));break;//get ypos of player xxxx
+                    case "garx":out.write(getGarbageX(arg.nextToken()));break;//get xpos of garbage xxxx
+                    case "gary":out.write(getGarbageY(arg.nextToken()));break;//get ypos of garbage xxxx
+                    case "scor":out.write(getScore(arg.nextToken()));break;//get score of player xxxx
+                    case "valu":out.write(getValue(arg.nextToken()));break;//get value of garbage xxxx
+                    case "id":out.write(getId(arg.nextToken()));break;//get id of player xxxx
+                    case "snam":out.write(setName(arg.nextToken(),arg.nextToken()));break;//get number of garbage
+                    case "quit":out.write(leaveGame(arg.nextToken()));break;//makes player xxxx leave the game
+                    case "setx":out.write(setXPos(arg.nextToken(),arg.nextToken()));break;//set xpos of player xxxx
+                    case "sety":out.write(setYPos(arg.nextToken(),arg.nextToken()));break;//set ypos of player xxxx
+                    case "join":out.write(joinGame());break;//join game
+                    case "head":out.write(getHeading(arg.nextToken()));break;//get heading of player xxxx
+                    case "dim":out.write(getDimension(arg.nextToken()));break;//get dimensions of the game board 0=w 1=h
                 }
                 out.close();
             }catch(Exception e){
                 if(debug)e.printStackTrace();
             }
         }
-        private int getNum(int which){
-            if(which==0)return players.size();
-            else if(which==1)return garbage.size();
-            else return -1;
+        private String getNum(String which){
+            if(which.equals("p"))return ""+players.size();
+            else if(which.equals("g"))return ""+garbage.size();
+            else return "err";
         }
-        private int getPlayerX(int index){
-            return players.get(index).getX();
+        private String getPlayerX(String index){
+            return ""+players.get(Integer.parseInt(index)).getX();
         }
-        private int getPlayerY(int index){
-            return players.get(index).getY();
+        private String getPlayerY(String index){
+            return ""+players.get(Integer.parseInt(index)).getY();
         }
-        private int getGarbageX(int index){
-            return garbage.get(index).getX();
+        private String getGarbageX(String index){
+            return ""+garbage.get(Integer.parseInt(index)).getX();
         }
-        private int getGarbageY(int index){
-            return garbage.get(index).getY();
+        private String getGarbageY(String index){
+            return ""+garbage.get(Integer.parseInt(index)).getY();
         }
-        private int getScore(int index){
-            return players.get(index).getScore();
+        private String getScore(String index){
+            return ""+players.get(Integer.parseInt(index)).getScore();
         }
-        private int getValue(int index){
-            return garbage.get(index).getValue();
+        private String getValue(String index){
+            return ""+garbage.get(Integer.parseInt(index)).getValue();
         }
-        private int getId(int index){
-            return players.get(index).getId();
+        private String getId(String index){
+            return ""+players.get(Integer.parseInt(index)).getId();
         }
-        private int leaveGame(int index){
-            players.remove(index);
-            return 1;
+        private String leaveGame(String index){
+            players.remove(Integer.parseInt(index));
+            return "1";
         }
-        private int setXPos(int index,int newPos){
-            players.get(index).setX(newPos);
-            return 1;
+        private String setXPos(String index,String newPos){
+            players.get(Integer.parseInt(index)).setX(Integer.parseInt(newPos));
+            return "1";
         }
-        private int setYPos(int index,int newPos){
-            players.get(index).setY(newPos);
-            return 1;
+        private String setYPos(String index,String newPos){
+            players.get(Integer.parseInt(index)).setY(Integer.parseInt(newPos));
+            return "1";
         }
-        private int joinGame(){
+        private String joinGame(){
             players.add(new Player());
             players.get(players.size()-1).setId(players.size()-1);
-            return players.size()-1;
+            return ""+(players.size()-1);
         }
-        private int getHeading(int index){
-            return players.get(index).getHeading();
+        private String getHeading(String index){
+            return ""+players.get(Integer.parseInt(index)).getHeading();
         }
-        private int getDimension(int which){
+        private String getDimension(String which){
             switch(which){
-                case 0:return BOARD_WIDTH;
-                case 1:return BOARD_HEIGHT;
-                default:return -1;
+                case "w":return ""+BOARD_WIDTH;
+                case "h":return ""+BOARD_HEIGHT;
+                default:return "err";
             }
         }
-        private int getName(int index){
-            int out=0;
-            for(int i=0;i<2;i++){
-                out+=(((int)(players.get(index).getName().charAt(i))-97)<<(4*i));//god this is crunch time
-            }
-            return out;
+        private String getName(String index){
+            return players.get(Integer.parseInt(index)).getName();
         }
-        private int setName(int index,int newName){
-            String out="";
-            out+=(char)(97+(newName>>4)&0b1111);
-            out+=(char)(97+newName&0b1111);
-            players.get(index).setName(out);
-            return 1;
+        private String setName(String index,String newName){
+            players.get(Integer.parseInt(index)).setName(newName);
+            return "1";
         }
     }
 }
 
 /*
-    0000:xxxx get name of player xxxx                   returns 16 bits
-    0001:xxxx get number of 0000=players 0001=garbage   returns xxxxxxxx
-    0010:xxxx get xpos of player xxxx                   returns xxxxxxxx 
-    0011:xxxx get ypos of player xxxx                   returns xxxxxxxx
-    0100:xxxx get xpos of garbage xxxx                  returns xxxxxxxx
-    0101:xxxx get ypos of garbage xxxx                  returns xxxxxxxx
-    0110:xxxx get score of player xxxx                  returns xxxxxxxx
-    0111:xxxx get value of garbage xxxx                 returns xxxxxxxx
-    1000:xxxx get id of player xxxx                     returns xxxxxxxx
-    xxxxxxxx:1001:xxxx set name of player xxxx          returns xxxxxxxx
-    1010:xxxx quit game of player xxxx                  returns 1
-    xxxxxxxx:1011:xxxx set xpos of player xxxx          returns 1
-    xxxxxxxx:1100:xxxx set ypos of player xxxx          returns 1
-    1101:xxxx join game                                 returns xxxxxxxx
-    1110:xxxx get heading of player xxxx                returns xxxxxxxx
-    1111:xxxx get board dimensions 0000=w 0001=h        returns xxxxxxxx
+    name:n get name of player n         
+    num:x get number of p=players g=garbage 
+    xpos:n get xpos of player n        
+    ypos:n get ypos of player n      
+    garx:n get xpos of garbage n               
+    gary:n get ypos of garbage n         
+    scor:n get score of player n         
+    valu:n get value of garbage n        
+    id:n get id of player n              
+    snam:n:name set name of player n to name     
+    quit:n quit game of player n                            returns 1
+    setx:n:x set xpos of player n to x                      returns 1
+    sety:n:x set ypos of player n to x                      returns 1
+    join join game                              
+    head:n get heading of player n      
+    dim:x get board dimensions w=width h=height
 */

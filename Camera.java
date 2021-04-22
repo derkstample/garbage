@@ -62,7 +62,7 @@ public class Camera{
         for(Garbage gar:garbage){
             if(gar.getX()>x&&gar.getX()<x+width){
                 if(gar.getY()>y&&gar.getY()<y+height){
-                    g.fillOval(gar.getX(), gar.getY(), 10, 10);
+                    //g.fillOval(gar.getX(), gar.getY(), 10, 10);
                 }
             }
         }

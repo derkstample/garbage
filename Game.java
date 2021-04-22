@@ -63,8 +63,8 @@ public class Game extends JFrame implements KeyListener{
         dispWidth=disp.getWidth();
 
         setTitle("this game is garbage");
-        setExtendedState(JFrame.MAXIMIZED_BOTH);
-        setUndecorated(true);
+        //setExtendedState(JFrame.MAXIMIZED_BOTH);
+        //setUndecorated(true);
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
@@ -105,7 +105,7 @@ public class Game extends JFrame implements KeyListener{
                     g=strategy.getDrawGraphics();
                     drawBG(g);
                     //drawTracks(g);
-                    camera.drawView(g,client.getPlayers(),client.getGarbage());
+                    //camera.drawView(g,client.getPlayers(),client.getGarbage());
                     
                     moveMe();
                     moveCamera();

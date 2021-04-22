@@ -12,7 +12,7 @@ import java.awt.geom.AffineTransform;
 import java.awt.Graphics2D;
 
 
-public class Garbage{
+public class UpdatedGarbage{
     private double x,y;
     private int value;
     private double velX,velY;
@@ -24,13 +24,13 @@ public class Garbage{
 	public static final int EXIT_POLICY_STOP = 1;
 	public static final int EXIT_POLICY_DIE = 2;
 	public static final int EXIT_POLICY_WRAP = 3;
-    public Garbage(){
+    public UpdatedGarbage(){
         x=y=0;
         value=1;
         velX=0;
         velY=0;
     }
-    public Garbage(int x, int y, int value, double velX, double velY) {
+    public UpdatedGarbage(int x, int y, int value, double velX, double velY) {
         this.x = x;
         this.y = y;
         this.value = value;
